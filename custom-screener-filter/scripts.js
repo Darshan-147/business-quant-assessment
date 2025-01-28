@@ -75,51 +75,58 @@ jQuery(document).ready(function ($) {
             const comparison = $(this).find('.comparison-select').val();
             const value = $(this).find('.value-input').val();
             const unit = $(this).find('.unit-select').val();
-
-            if (metric && comparison && value && unit) {
+    
+            if (metric && comparison && value) {
                 filters.push({ metric, comparison, value, unit });
             }
         });
-
-        table.clear().draw();
+    
+        // Clear table before adding filtered data
+        table.clear();
+    
         let filteredData = screenerData.data.filter(row => {
             return filters.every(filter => {
-                let index = screenerData.list.findIndex(item => item[0] === filter.metric);
-                let cellValue = parseFloat(row[index]); 
+                let metricIndex = screenerData.list.findIndex(item => item[0] === filter.metric);
+                if (metricIndex === -1) return true; // Skip if metric is not found
+    
+                let cellValue = parseFloat(row[metricIndex]); // Get value from correct column
                 let filterValue = parseFloat(filter.value);
-                if (isNaN(cellValue) || isNaN(filterValue)) return true;
-
-                switch (filter.unit) {
-                    case "%":
-                        filterValue = filterValue / 100; 
-                        break;
-                    case "M":
-                        filterValue = filterValue * 1e6; 
-                        break;
-                    case "B":
-                        filterValue = filterValue * 1e9; 
-                        break;
-                }
-
+    
+                if (isNaN(cellValue) || isNaN(filterValue)) return false; // Ignore invalid values
+    
+                // Convert units
+                if (filter.unit === "%") filterValue /= 100;
+                if (filter.unit === "M") filterValue *= 1e6;
+                if (filter.unit === "B") filterValue *= 1e9;
+    
+                // Apply comparison
                 switch (filter.comparison) {
-                    case "greater":
-                        return cellValue > filterValue;
-                    case "greater_equal":
-                        return cellValue >= filterValue;
-                    case "less":
-                        return cellValue < filterValue;
-                    case "less_equal":
-                        return cellValue <= filterValue;
-                    case "equal":
-                        return cellValue === filterValue;
-                    default:
-                        return true;
+                    case "greater": return cellValue > filterValue;
+                    case "greater_equal": return cellValue >= filterValue;
+                    case "less": return cellValue < filterValue;
+                    case "less_equal": return cellValue <= filterValue;
+                    case "equal": return cellValue === filterValue;
+                    default: return true;
                 }
             });
         });
-
+    
+        // **Ensure filtered data matches the column format**
+        filteredData = filteredData.map(row => [
+            row[0], // Ticker
+            row[1], // Company
+            row[2], // Sector
+            row[3], // Industry
+            row[4], // Market Cap
+            row[5], // 52w High
+        ]);
+    
+        console.log(row);
+        console.log(filteredData);
+        // Add and render filtered data
         table.rows.add(filteredData).draw();
     }
+    
 
     // Apply filters when value changes
     $(document).on('change', '.filter-row select, .filter-row input', function () {
